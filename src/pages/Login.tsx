@@ -53,6 +53,7 @@ export default function Login() {
     } catch (err: any) {
       console.error('Error en login:', err);
       setError(err.response?.data?.message || 'Credenciales incorrectas. Verifica tu correo y contraseña.');
+      setPassword('');
     } finally {
       setLoading(false);
     }
@@ -85,7 +86,7 @@ export default function Login() {
           <p className="mt-2 text-sm text-text-muted">Bienvenido de nuevo</p>
         </div>
 
-        <form onSubmit={handleSubmit} noValidate className="space-y-6">
+        <form onSubmit={handleSubmit} noValidate className="space-y-6" autoComplete="off">
           {error && (
             <div className="auth-error-banner">
               <AlertCircle size={16} />
@@ -102,6 +103,7 @@ export default function Login() {
               <input
                 id="email"
                 type="email"
+                autoComplete="off"
                 value={email}
                 onChange={(e) => handleEmailChange(e.target.value)}
                 placeholder="nombre@ejemplo.com"
@@ -129,6 +131,7 @@ export default function Login() {
               <input
                 id="password"
                 type={showPassword ? 'text' : 'password'}
+                autoComplete="new-password"
                 value={password}
                 onChange={(e) => handlePasswordChange(e.target.value)}
                 placeholder="••••••••"
@@ -172,7 +175,7 @@ export default function Login() {
       </div>
 
       <footer className="absolute bottom-8 text-xs text-text-muted">
-        CONNECTLY © 2026 • PRIVACIDAD • TÉRMINOS
+        CONNECTLY © 2026
       </footer>
     </div>
   );

@@ -65,9 +65,9 @@ export default function Sidebar() {
           </div>
         </div>
 
-        <div className="sidebar-profile">
+        <div className="sidebar-profile" onClick={() => navigate('/profile')} style={{ cursor: 'pointer' }}>
           <img
-            src="/images/avatar_user.png"
+            src={user?.avatarUrl || "/images/avatar_user.png"}
             alt="Tu perfil"
             className="sidebar-profile-avatar"
           />

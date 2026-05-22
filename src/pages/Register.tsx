@@ -86,7 +86,7 @@ export default function Register() {
           <h2 className="text-2xl font-bold">Crear cuenta</h2>
         </div>
 
-        <form onSubmit={handleSubmit} noValidate className="space-y-6">
+        <form onSubmit={handleSubmit} noValidate className="space-y-6" autoComplete="off">
           {error && (
             <div className="auth-error-banner">
               <AlertCircle size={16} />
@@ -103,6 +103,7 @@ export default function Register() {
               <input
                 id="username"
                 type="text"
+                autoComplete="off"
                 value={username}
                 onChange={(e) => handleFieldChange('username', e.target.value, setUsername)}
                 placeholder="Tu nombre de usuario"
@@ -130,6 +131,7 @@ export default function Register() {
               <input
                 id="email"
                 type="email"
+                autoComplete="off"
                 value={email}
                 onChange={(e) => handleFieldChange('email', e.target.value, setEmail)}
                 placeholder="ejemplo@esencia.com"
@@ -157,6 +159,7 @@ export default function Register() {
               <input
                 id="password"
                 type={showPassword ? 'text' : 'password'}
+                autoComplete="new-password"
                 value={password}
                 onChange={(e) => handleFieldChange('password', e.target.value, setPassword)}
                 placeholder="••••••••"
@@ -198,9 +201,7 @@ export default function Register() {
           </Link>
         </div>
       </div>
-      
-      <footer className="absolute bottom-8 text-xs text-transparent">
-        {/* Placeholder para mantener el espacio igual que en login */}
+      <footer className="absolute bottom-8 text-xs text-text-muted">
         CONNECTLY © 2026
       </footer>
     </div>
