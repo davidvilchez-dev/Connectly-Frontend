@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Sidebar from '../components/layout/Sidebar';
 import api from '../lib/axios';
-import { Loader2, AlertCircle, Heart, MessageCircle, Bookmark, Compass } from 'lucide-react';
+import { Loader2, AlertCircle, Heart, MessageCircle, Bookmark, Compass, Users } from 'lucide-react';
 import PostDetailModal from '../components/feed/PostDetailModal';
 import { useAuthStore } from '../store/authStore';
 
@@ -58,6 +58,27 @@ export default function Explore() {
   const user = useAuthStore((state) => state.user);
   const [likedPosts, setLikedPosts] = useState<{ [key: number]: boolean }>({});
   const [savedPosts, setSavedPosts] = useState<{ [key: number]: boolean }>({});
+
+  // Tabs states
+  const [activeTab, setActiveTab] = useState<'all' | 'following'>('all');
+  const [followingIds, setFollowingIds] = useState<number[]>([]);
+  const [loadingFollowing, setLoadingFollowing] = useState(false);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const fetchFollowingList = async () => {
+      try {
+        setLoadingFollowing(true);
+        const res = await api.get(`/users/${user.id}/following`);
+        setFollowingIds(res.data.map((u: any) => u.id));
+      } catch (err) {
+        console.error('Error fetching following list:', err);
+      } finally {
+        setLoadingFollowing(false);
+      }
+    };
+    fetchFollowingList();
+  }, [user?.id]);
 
   useEffect(() => {
     const fetchExplorePosts = async () => {
@@ -167,6 +188,10 @@ export default function Explore() {
     localStorage.setItem(storageKey, JSON.stringify(savedIds));
   };
 
+  const displayedPosts = activeTab === 'all'
+    ? posts
+    : posts.filter(post => followingIds.includes(post.user.id));
+
   return (
     <div className="feed-layout explore-layout">
       {/* Left Sidebar */}
@@ -174,13 +199,31 @@ export default function Explore() {
 
       {/* Main Explore Content */}
       <main className="feed-main explore-main">
-        <div className="explore-header" style={{ marginBottom: '24px' }}>
+        <div className="explore-header" style={{ marginBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <h2 className="feed-title" style={{ margin: 0 }}>Explorar</h2>
           </div>
           <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', margin: '4px 0 0 0' }}>
             Descubre las perspectivas más recientes de la comunidad.
           </p>
+        </div>
+
+        {/* Explore Tabs Header */}
+        <div className="explore-tabs-header">
+          <button
+            className={`explore-tab-btn ${activeTab === 'all' ? 'active' : ''}`}
+            onClick={() => setActiveTab('all')}
+          >
+            <Compass size={16} />
+            <span>Todos</span>
+          </button>
+          <button
+            className={`explore-tab-btn ${activeTab === 'following' ? 'active' : ''}`}
+            onClick={() => setActiveTab('following')}
+          >
+            <Users size={16} />
+            <span>Seguidos</span>
+          </button>
         </div>
 
         {loading && (
@@ -197,17 +240,29 @@ export default function Explore() {
           </div>
         )}
 
-        {!loading && !error && posts.length === 0 && (
-          <div className="feed-empty-state" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', textAlign: 'center', gap: '12px', border: '1px dashed var(--color-border)', borderRadius: '16px', margin: '20px 0' }}>
-            <Compass size={40} style={{ color: 'var(--color-text-muted)' }} />
-            <h3 style={{ margin: '0', fontSize: '1.05rem', fontWeight: '600', color: 'var(--color-text-main)' }}>No hay publicaciones para explorar</h3>
-            <p style={{ margin: '0', fontSize: '0.88rem', color: 'var(--color-text-muted)', maxWidth: '340px' }}>Las publicaciones compartidas en la comunidad aparecerán aquí.</p>
-          </div>
+        {!loading && !error && displayedPosts.length === 0 && (
+          activeTab === 'following' ? (
+            <div className="explore-empty-following">
+              <Users size={40} style={{ color: 'var(--color-text-muted)', opacity: 0.8 }} />
+              <h3 style={{ margin: '0', fontSize: '1.05rem', fontWeight: '600', color: 'var(--color-text-main)' }}>
+                No hay publicaciones de tus seguidos
+              </h3>
+              <p style={{ margin: '0', fontSize: '0.88rem', color: 'var(--color-text-muted)', maxWidth: '380px', lineHeight: '1.5' }}>
+                Aún no sigues a nadie o las personas que sigues no han publicado nada. ¡Busca usuarios en el buscador del panel lateral y comienza a seguirlos!
+              </p>
+            </div>
+          ) : (
+            <div className="feed-empty-state" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', textAlign: 'center', gap: '12px', border: '1px dashed var(--color-border)', borderRadius: '16px', margin: '20px 0' }}>
+              <Compass size={40} style={{ color: 'var(--color-text-muted)' }} />
+              <h3 style={{ margin: '0', fontSize: '1.05rem', fontWeight: '600', color: 'var(--color-text-main)' }}>No hay publicaciones para explorar</h3>
+              <p style={{ margin: '0', fontSize: '0.88rem', color: 'var(--color-text-muted)', maxWidth: '340px' }}>Las publicaciones compartidas en la comunidad aparecerán aquí.</p>
+            </div>
+          )
         )}
 
-        {!loading && !error && posts.length > 0 && (
+        {!loading && !error && displayedPosts.length > 0 && (
           <div className="explore-masonry">
-            {posts.map((post) => {
+            {displayedPosts.map((post) => {
               const displayName = post.user.username || post.user.email.split('@')[0];
               const avatar = post.user.avatarUrl || '/images/avatar_user.png';
               const isLiked = likedPosts[post.id] || false;
@@ -285,6 +340,7 @@ export default function Explore() {
           isOpen={!!selectedPost}
           onClose={() => setSelectedPost(null)}
           postId={selectedPost.id}
+          postAuthorId={selectedPost.user.id}
           postAuthor={selectedPost.user.username || selectedPost.user.email.split('@')[0]}
           postAvatar={selectedPost.user.avatarUrl || '/images/avatar_user.png'}
           postTimeAgo={formatTimeAgo(selectedPost.createdAt)}
@@ -298,6 +354,13 @@ export default function Explore() {
                 p.id === selectedPost.id ? { ...p, commentsCount: newCount } : p
               )
             );
+          }}
+          onFollowToggle={(newStatus) => {
+            if (newStatus) {
+              setFollowingIds((prev) => [...prev, selectedPost.user.id]);
+            } else {
+              setFollowingIds((prev) => prev.filter((id) => id !== selectedPost.user.id));
+            }
           }}
         />
       )}

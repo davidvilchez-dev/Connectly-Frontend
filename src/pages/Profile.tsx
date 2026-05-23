@@ -14,6 +14,8 @@ interface Post {
   commentsCount: number;
   createdAt: string;
   user?: any;
+  author?: string;
+  avatar?: string;
 }
 
 interface UserProfile {
@@ -37,7 +39,7 @@ function formatTimeAgo(dateString: string): string {
     if (hours < 24) return `hace ${hours} ${hours === 1 ? 'hora' : 'horas'}`;
     const days = Math.floor(hours / 24);
     if (days < 30) return `hace ${days} ${days === 1 ? 'día' : 'días'}`;
-    
+
     return past.toLocaleDateString();
   } catch (err) {
     return 'hace poco';
@@ -48,7 +50,7 @@ export default function Profile() {
   const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
   const loggedInUser = useAuthStore((state) => state.user);
-  
+
   const isOwnProfile = !id || Number(id) === loggedInUser?.id;
   const profileUserId = isOwnProfile ? loggedInUser?.id : Number(id);
 
@@ -358,8 +360,8 @@ export default function Profile() {
           onClose={() => setSelectedPost(null)}
           postId={selectedPost.id}
           postAuthorId={selectedPost.user?.id || user?.id || 0}
-          postAuthor={selectedPost.author}
-          postAvatar={selectedPost.avatar}
+          postAuthor={selectedPost.author || ''}
+          postAvatar={selectedPost.avatar || ''}
           postTimeAgo={formatTimeAgo(selectedPost.createdAt)}
           postContent={selectedPost.content}
           postImage={selectedPost.imageUrl}

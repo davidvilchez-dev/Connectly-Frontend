@@ -50,6 +50,7 @@ export default function Feed() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+
   useEffect(() => {
     const fetchPosts = async () => {
       try {

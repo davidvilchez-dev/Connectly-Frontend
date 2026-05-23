@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Image, Smile, Send, X, Upload, AlertCircle, Loader2 } from 'lucide-react';
+import { Image, Smile, Send, X, Upload, AlertCircle } from 'lucide-react';
 import Sidebar from '../components/layout/Sidebar';
 import api from '../lib/axios';
 import { useAuthStore } from '../store/authStore';
