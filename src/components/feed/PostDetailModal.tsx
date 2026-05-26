@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { X, Send, Loader2, AlertCircle } from 'lucide-react';
 import api from '../../lib/axios';
 import { useAuthStore } from '../../store/authStore';
+import EditPostModal from './EditPostModal';
+import ConfirmModal from './ConfirmModal';
 
 interface UserResponse {
   id: number;
@@ -33,6 +35,8 @@ interface PostDetailModalProps {
   onCommentAdded: (newCount: number) => void;
   isFollowing?: boolean;
   onFollowToggle?: (newStatus: boolean) => void;
+  onPostDeleted?: (id: number) => void;
+  onPostUpdated?: (id: number, newContent: string, newImage?: string) => void;
 }
 
 function formatTimeAgo(dateString: string): string {
@@ -67,6 +71,8 @@ export default function PostDetailModal({
   onCommentAdded,
   isFollowing: propIsFollowing,
   onFollowToggle,
+  onPostDeleted,
+  onPostUpdated,
 }: PostDetailModalProps) {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
@@ -77,6 +83,71 @@ export default function PostDetailModal({
   const [commentText, setCommentText] = useState('');
   const [error, setError] = useState('');
   const commentsEndRef = useRef<HTMLDivElement>(null);
+
+  // Estados para Edición y Eliminación de Comentarios
+  const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
+  const [editingCommentText, setEditingCommentText] = useState('');
+  const [isSavingComment, setIsSavingComment] = useState(false);
+
+  // Estados para Edición y Eliminación de Publicación
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isConfirmDeletePostOpen, setIsConfirmDeletePostOpen] = useState(false);
+  const [isConfirmDeleteCommentOpen, setIsConfirmDeleteCommentOpen] = useState(false);
+  const [commentIdToDelete, setCommentIdToDelete] = useState<number | null>(null);
+
+  const executePostDelete = async () => {
+    try {
+      await api.delete(`/posts/${postId}`);
+      onClose(); // Cerrar modal inmediatamente
+      
+      if (onPostDeleted) {
+        onPostDeleted(postId);
+      }
+    } catch (err) {
+      console.error('Error al eliminar publicación:', err);
+      alert('No se pudo eliminar la publicación. Intenta de nuevo.');
+    }
+  };
+
+  const executeCommentDelete = async () => {
+    if (commentIdToDelete === null) return;
+    try {
+      await api.delete(`/comments/${commentIdToDelete}`);
+      // Remover localmente del estado
+      setComments((prev) => prev.filter((c) => c.id !== commentIdToDelete));
+      onCommentAdded(commentCount - 1);
+      setCommentIdToDelete(null);
+    } catch (err) {
+      console.error('Error al eliminar comentario:', err);
+      alert('No se pudo eliminar el comentario. Intenta de nuevo.');
+    }
+  };
+
+  const handleCommentEditSave = async (commentId: number) => {
+    if (!editingCommentText.trim() || isSavingComment) return;
+
+    try {
+      setIsSavingComment(true);
+      const response = await api.put(`/comments/${commentId}`, {
+        content: editingCommentText.trim(),
+        postId: postId,
+      });
+
+      const updatedComment = response.data;
+
+      // Actualizar localmente
+      setComments((prev) =>
+        prev.map((c) => (c.id === commentId ? { ...c, content: updatedComment.content } : c))
+      );
+      setEditingCommentId(null);
+      setEditingCommentText('');
+    } catch (err) {
+      console.error('Error al editar comentario:', err);
+      alert('No se pudo guardar el comentario. Intenta de nuevo.');
+    } finally {
+      setIsSavingComment(false);
+    }
+  };
 
   const navigateToProfile = (targetUserId: number) => {
     onClose();
@@ -225,45 +296,89 @@ export default function PostDetailModal({
               onClick={() => navigateToProfile(postAuthorId)}
               style={{ cursor: 'pointer' }}
             />
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <h4
-                  className="post-modal-author-name"
-                  onClick={() => navigateToProfile(postAuthorId)}
-                  style={{ margin: 0, cursor: 'pointer' }}
-                >
-                  {postAuthor}
-                </h4>
-                {user?.id !== postAuthorId && (
-                  <button
-                    onClick={handleFollowToggle}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: isFollowing ? 'var(--color-text-muted)' : 'var(--color-accent)',
-                      fontWeight: '700',
-                      fontSize: '0.8rem',
-                      cursor: 'pointer',
-                      padding: '0 4px',
-                      transition: 'color 0.2s ease',
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.color = isFollowing ? 'var(--color-text-main)' : 'var(--color-accent-hover)';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.color = isFollowing ? 'var(--color-text-muted)' : 'var(--color-accent)';
-                    }}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h4
+                    className="post-modal-author-name"
+                    onClick={() => navigateToProfile(postAuthorId)}
+                    style={{ margin: 0, cursor: 'pointer' }}
                   >
-                    {isFollowing ? '• Siguiendo' : '• Seguir'}
-                  </button>
+                    {postAuthor}
+                  </h4>
+                  {user?.id !== postAuthorId && (
+                    <button
+                      onClick={handleFollowToggle}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: isFollowing ? 'var(--color-text-muted)' : 'var(--color-accent)',
+                        fontWeight: '700',
+                        fontSize: '0.8rem',
+                        cursor: 'pointer',
+                        padding: '0 4px',
+                        transition: 'color 0.2s ease',
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.color = isFollowing ? 'var(--color-text-main)' : 'var(--color-accent-hover)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.color = isFollowing ? 'var(--color-text-muted)' : 'var(--color-accent)';
+                      }}
+                    >
+                      {isFollowing ? '• Siguiendo' : '• Seguir'}
+                    </button>
+                  )}
+                </div>
+
+                {user?.id === postAuthorId && (
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={() => setIsEditModalOpen(true)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--color-text-muted)',
+                        fontWeight: '700',
+                        fontSize: '0.8rem',
+                        cursor: 'pointer',
+                        padding: '0 4px',
+                        transition: 'color 0.2s ease',
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.color = 'var(--color-accent)'}
+                      onMouseOut={(e) => e.currentTarget.style.color = 'var(--color-text-muted)'}
+                    >
+                      • Editar
+                    </button>
+                    <button
+                      onClick={() => setIsConfirmDeletePostOpen(true)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--color-text-muted)',
+                        fontWeight: '700',
+                        fontSize: '0.8rem',
+                        cursor: 'pointer',
+                        padding: '0 4px',
+                        transition: 'color 0.2s ease',
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.color = '#ef4444'}
+                      onMouseOut={(e) => e.currentTarget.style.color = 'var(--color-text-muted)'}
+                    >
+                      • Eliminar
+                    </button>
+                  </div>
                 )}
               </div>
-              <p className="post-modal-description-text" style={{ margin: '0 0 6px 0', fontSize: '0.9rem', lineHeight: '1.5', color: 'var(--color-text-main)' }}>
-                {postContent}
-              </p>
-              <div>
-                <span className="post-modal-time">{postTimeAgo}</span>
-              </div>
+
+              <>
+                <p className="post-modal-description-text" style={{ margin: '0 0 6px 0', fontSize: '0.9rem', lineHeight: '1.5', color: 'var(--color-text-main)' }}>
+                  {postContent}
+                </p>
+                <div>
+                  <span className="post-modal-time">{postTimeAgo}</span>
+                </div>
+              </>
             </div>
           </div>
 
@@ -299,6 +414,9 @@ export default function PostDetailModal({
               comments.map((comment) => {
                 const commenterName = comment.user.username || comment.user.email.split('@')[0];
                 const commenterAvatar = comment.user.avatarUrl || '/images/avatar_user.png';
+                const isCommentOwner = user?.id === comment.user.id;
+                const isCommentEditing = editingCommentId === comment.id;
+
                 return (
                   <div key={comment.id} className="post-modal-comment-item">
                     <img
@@ -316,8 +434,77 @@ export default function PostDetailModal({
                       >
                         {commenterName}
                       </h4>
-                      <p className="post-modal-comment-content">{comment.content}</p>
-                      <span className="post-modal-comment-date">{formatTimeAgo(comment.createdAt)}</span>
+
+                      {isCommentEditing ? (
+                        <div className="comment-edit-input-wrapper">
+                          <input
+                            type="text"
+                            className="comment-edit-input"
+                            value={editingCommentText}
+                            onChange={(e) => setEditingCommentText(e.target.value)}
+                            disabled={isSavingComment}
+                            maxLength={1000}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleCommentEditSave(comment.id);
+                            }}
+                          />
+                          <div className="comment-edit-actions">
+                            <button
+                              type="button"
+                              className="comment-action-btn"
+                              onClick={() => {
+                                setEditingCommentId(null);
+                                setEditingCommentText('');
+                              }}
+                              disabled={isSavingComment}
+                            >
+                              Cancelar
+                            </button>
+                            <button
+                              type="button"
+                              className="comment-action-btn"
+                              style={{ color: 'var(--color-accent)' }}
+                              onClick={() => handleCommentEditSave(comment.id)}
+                              disabled={isSavingComment || !editingCommentText.trim()}
+                            >
+                              {isSavingComment ? '...' : 'Guardar'}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="post-modal-comment-content">{comment.content}</p>
+
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
+                            <span className="post-modal-comment-date">{formatTimeAgo(comment.createdAt)}</span>
+
+                            {isCommentOwner && (
+                              <div className="comment-action-btns">
+                                <button
+                                  type="button"
+                                  className="comment-action-btn"
+                                  onClick={() => {
+                                    setEditingCommentId(comment.id);
+                                    setEditingCommentText(comment.content);
+                                  }}
+                                >
+                                  Editar
+                                </button>
+                                  <button
+                                    type="button"
+                                    className="comment-action-btn danger"
+                                    onClick={() => {
+                                      setCommentIdToDelete(comment.id);
+                                      setIsConfirmDeleteCommentOpen(true);
+                                    }}
+                                  >
+                                    Eliminar
+                                  </button>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 );
@@ -352,6 +539,50 @@ export default function PostDetailModal({
           </form>
         </div>
       </div>
+
+      {/* Premium Edit Post Modal */}
+      <EditPostModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        postId={postId}
+        postAuthor={postAuthor}
+        postAvatar={postAvatar}
+        postTimeAgo={postTimeAgo}
+        postContent={postContent}
+        postImage={postImage}
+        onPostUpdated={(id, newContent, newImageUrl) => {
+          if (onPostUpdated) {
+            onPostUpdated(id, newContent, newImageUrl);
+          }
+        }}
+      />
+
+      {/* Confirm Delete Post Modal */}
+      <ConfirmModal
+        isOpen={isConfirmDeletePostOpen}
+        onClose={() => setIsConfirmDeletePostOpen(false)}
+        onConfirm={executePostDelete}
+        title="¿Eliminar publicación?"
+        message="¿Estás seguro de que deseas eliminar esta publicación? Esta acción no se puede deshacer y borrará permanentemente todo su contenido."
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        isDanger={true}
+      />
+
+      {/* Confirm Delete Comment Modal */}
+      <ConfirmModal
+        isOpen={isConfirmDeleteCommentOpen}
+        onClose={() => {
+          setIsConfirmDeleteCommentOpen(false);
+          setCommentIdToDelete(null);
+        }}
+        onConfirm={executeCommentDelete}
+        title="¿Eliminar comentario?"
+        message="¿Estás seguro de que deseas eliminar este comentario? Esta acción no se puede deshacer."
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        isDanger={true}
+      />
     </div>
   );
 }

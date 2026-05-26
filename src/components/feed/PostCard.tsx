@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, MessageCircle, Bookmark, MoreHorizontal } from 'lucide-react';
+import { Heart, MessageCircle, Bookmark, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
 import api from '../../lib/axios';
 import { useAuthStore } from '../../store/authStore';
 import PostDetailModal from './PostDetailModal';
+import EditPostModal from './EditPostModal';
+import ConfirmModal from './ConfirmModal';
 
 interface PostCardProps {
   id: number;
@@ -16,6 +18,8 @@ interface PostCardProps {
   likes: number;
   comments: number;
   liked?: boolean;
+  onPostDeleted?: (id: number) => void;
+  onPostUpdated?: (id: number, newContent: string, newImage?: string) => void;
 }
 
 function formatCount(num: number): string {
@@ -36,6 +40,8 @@ export default function PostCard({
   likes,
   comments,
   liked: initialLiked = false,
+  onPostDeleted,
+  onPostUpdated,
 }: PostCardProps) {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
@@ -47,6 +53,40 @@ export default function PostCard({
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
+
+  // Estados locales para Edición y Eliminación
+  const [showMenu, setShowMenu] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
+
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Cerrar el menú contextual al hacer clic fuera del dropdown
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const executePostDelete = async () => {
+    try {
+      await api.delete(`/posts/${id}`);
+      setShowMenu(false);
+
+      if (onPostDeleted) {
+        onPostDeleted(id);
+      }
+    } catch (err) {
+      console.error('Error al eliminar publicación:', err);
+      alert('No se pudo eliminar la publicación. Intenta de nuevo.');
+    }
+  };
 
   const handleProfileClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -164,7 +204,7 @@ export default function PostCard({
         content: commentText.trim(),
         postId: id,
       });
-      
+
       setCommentText('');
       setCommentCount((prev) => prev + 1);
     } catch (err) {
@@ -224,9 +264,24 @@ export default function PostCard({
               <span className="post-time">{timeAgo}</span>
             </div>
           </div>
-          <button className="post-more-btn">
-            <MoreHorizontal size={20} />
-          </button>
+          <div className="post-more-wrapper" ref={menuRef}>
+            <button className="post-more-btn" onClick={() => setShowMenu(!showMenu)}>
+              <MoreHorizontal size={20} />
+            </button>
+
+            {showMenu && user?.id === authorId && (
+              <div className="post-menu-dropdown">
+                <button className="post-menu-item" onClick={() => { setIsEditModalOpen(true); setShowMenu(false); }}>
+                  <Edit size={14} style={{ marginRight: '6px' }} />
+                  Editar publicación
+                </button>
+                <button className="post-menu-item danger" onClick={() => { setIsConfirmDeleteOpen(true); setShowMenu(false); }}>
+                  <Trash2 size={14} style={{ marginRight: '6px' }} />
+                  Eliminar publicación
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Post Content */}
@@ -238,7 +293,6 @@ export default function PostCard({
           {content}
         </p>
 
-        {/* Post Image */}
         {image && (
           <div
             className="post-image-wrapper"
@@ -318,6 +372,37 @@ export default function PostCard({
         onCommentAdded={(newCount) => setCommentCount(newCount)}
         isFollowing={isFollowing}
         onFollowToggle={(newStatus) => setIsFollowing(newStatus)}
+        onPostDeleted={onPostDeleted}
+        onPostUpdated={onPostUpdated}
+      />
+
+      {/* Premium Edit Post Modal */}
+      <EditPostModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        postId={id}
+        postAuthor={author}
+        postAvatar={avatar}
+        postTimeAgo={timeAgo}
+        postContent={content}
+        postImage={image}
+        onPostUpdated={(postId, newContent, newImageUrl) => {
+          if (onPostUpdated) {
+            onPostUpdated(postId, newContent, newImageUrl);
+          }
+        }}
+      />
+
+      {/* Confirm Delete Post Modal */}
+      <ConfirmModal
+        isOpen={isConfirmDeleteOpen}
+        onClose={() => setIsConfirmDeleteOpen(false)}
+        onConfirm={executePostDelete}
+        title="¿Eliminar publicación?"
+        message="¿Estás seguro de que deseas eliminar esta publicación? Esta acción no se puede deshacer y borrará permanentemente todo su contenido."
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        isDanger={true}
       />
     </>
   );

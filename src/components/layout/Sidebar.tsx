@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Home, Compass, PlusSquare, User, LogOut, Search, Loader2 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
+import { Logo } from '../common/Logo';
 import api from '../../lib/axios';
 
 const navItems = [
@@ -76,9 +77,11 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       {/* Logo */}
-      <div className="sidebar-logo">
-        <h1>Connectly</h1>
-      </div>
+      <Link to="/feed" style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+        <div className="sidebar-logo">
+          <Logo size="md" />
+        </div>
+      </Link>
 
       {/* Buscador de Usuarios Premium Autocontenido */}
       <div className="sidebar-search-container" ref={searchRef}>

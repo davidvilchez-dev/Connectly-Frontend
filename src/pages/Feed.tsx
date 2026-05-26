@@ -115,6 +115,16 @@ export default function Feed() {
                 likes={post.likesCount}
                 comments={post.commentsCount}
                 liked={post.liked}
+                onPostDeleted={(deletedId) => {
+                  setPosts((prev) => prev.filter((p) => p.id !== deletedId));
+                }}
+                onPostUpdated={(updatedId, newContent, newImageUrl) => {
+                  setPosts((prev) =>
+                    prev.map((p) =>
+                      p.id === updatedId ? { ...p, content: newContent, imageUrl: newImageUrl } : p
+                    )
+                  );
+                }}
               />
             ))}
           </div>

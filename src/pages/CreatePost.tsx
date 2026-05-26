@@ -136,7 +136,7 @@ export default function CreatePost() {
     <div className="feed-layout explore-layout">
       <Sidebar />
 
-      <main className="feed-main">
+      <main className="feed-main create-main-container">
         <div className="create-page">
           {/* Header */}
           <div className="create-page-header">

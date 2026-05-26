@@ -62,19 +62,15 @@ export default function Explore() {
   // Tabs states
   const [activeTab, setActiveTab] = useState<'all' | 'following'>('all');
   const [followingIds, setFollowingIds] = useState<number[]>([]);
-  const [loadingFollowing, setLoadingFollowing] = useState(false);
 
   useEffect(() => {
     if (!user?.id) return;
     const fetchFollowingList = async () => {
       try {
-        setLoadingFollowing(true);
         const res = await api.get(`/users/${user.id}/following`);
         setFollowingIds(res.data.map((u: any) => u.id));
       } catch (err) {
         console.error('Error fetching following list:', err);
-      } finally {
-        setLoadingFollowing(false);
       }
     };
     fetchFollowingList();
@@ -361,6 +357,20 @@ export default function Explore() {
             } else {
               setFollowingIds((prev) => prev.filter((id) => id !== selectedPost.user.id));
             }
+          }}
+          onPostDeleted={(deletedId) => {
+            setPosts((prev) => prev.filter((p) => p.id !== deletedId));
+            setSelectedPost(null);
+          }}
+          onPostUpdated={(updatedId, newContent, newImageUrl) => {
+            setPosts((prev) =>
+              prev.map((p) =>
+                p.id === updatedId ? { ...p, content: newContent, imageUrl: newImageUrl } : p
+              )
+            );
+            setSelectedPost((prev) =>
+              prev ? { ...prev, content: newContent, imageUrl: newImageUrl } : null
+            );
           }}
         />
       )}

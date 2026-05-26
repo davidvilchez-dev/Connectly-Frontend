@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, User, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { Logo } from '../components/common/Logo';
 import api from '../lib/axios';
 
 export default function Register() {
@@ -77,7 +78,7 @@ export default function Register() {
     <div className="relative flex min-h-screen flex-col items-center justify-center p-4">
       {/* Logo */}
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold tracking-tight">Connectly</h1>
+        <Logo size="xl" />
       </div>
 
       {/* Card */}

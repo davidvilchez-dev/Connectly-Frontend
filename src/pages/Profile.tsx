@@ -376,6 +376,26 @@ export default function Profile() {
             );
             setSelectedPost((prev) => (prev ? { ...prev, commentsCount: newCount } : null));
           }}
+          onPostDeleted={(deletedId) => {
+            setPosts((prev) => prev.filter((p) => p.id !== deletedId));
+            setSavedPosts((prev) => prev.filter((p) => p.id !== deletedId));
+            setSelectedPost(null);
+          }}
+          onPostUpdated={(updatedId, newContent, newImageUrl) => {
+            setPosts((prev) =>
+              prev.map((p) =>
+                p.id === updatedId ? { ...p, content: newContent, imageUrl: newImageUrl } : p
+              )
+            );
+            setSavedPosts((prev) =>
+              prev.map((p) =>
+                p.id === updatedId ? { ...p, content: newContent, imageUrl: newImageUrl } : p
+              )
+            );
+            setSelectedPost((prev) =>
+              prev ? { ...prev, content: newContent, imageUrl: newImageUrl } : null
+            );
+          }}
         />
       )}
     </div>
