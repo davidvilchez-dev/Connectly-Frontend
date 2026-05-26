@@ -2,8 +2,7 @@
 
 **Proyecto:** Connectly  
 **Capa:** Cliente (Single Page Application)  
-**Enfoque metodológico:** SDD (Software Design Description)  
-**Tecnologías Clave:** React 19, Vite (Plugin SWC), TypeScript, Zustand 5.0.3, Tailwind CSS 4.3.0, Axios 1.7.9, Lucide Icons 0.475.0  
+**Tecnologías Clave:** React 19, Vite, TypeScript, Zustand 5.0.3, Tailwind CSS 4.3.0, Axios 1.7.9, Lucide Icons 0.475.0  
 **Versión:** 1.0  
 **Fecha:** Mayo 2026  
 
